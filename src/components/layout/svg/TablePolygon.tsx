@@ -1,0 +1,5 @@
+import { memo } from 'react';
+import type { CanteenTable } from '../../../types/canteen';
+import { centroid, polygonPoints } from '../../../utils/polygon';
+import { statusInfo } from '../../../utils/status';
+export const TablePolygon = memo(function TablePolygon({ table, selected, onSelect }: { table: CanteenTable; selected: boolean; onSelect: (table: CanteenTable) => void }) { const center = centroid(table.interfacePolygon); const status = statusInfo[table.statusId as 0|1|2]; return <g className="table-polygon" onClick={() => onSelect(table)} tabIndex={0} role="button" aria-label={`${table.name}, ${status.label}, ${table.seatCount} seats`} onKeyDown={e => e.key === 'Enter' && onSelect(table)}><polygon points={polygonPoints(table.interfacePolygon)} fill={status.hex} className={selected ? 'selected' : ''}/><text x={center.x} y={center.y - 5} textAnchor="middle" className="table-label">{table.name}</text><text x={center.x} y={center.y + 18} textAnchor="middle" className="table-seats">{table.seatCount} seats</text></g>; });

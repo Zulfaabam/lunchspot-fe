@@ -1,0 +1,2 @@
+import type { ConnectionStatus as State } from '../hooks/useSignalR';
+export function ConnectionStatus({ state }: { state: State }) { const info = state === 'live' ? ['bg-emerald-500', 'Live'] : state === 'reconnecting' ? ['bg-amber-400', 'Reconnecting...'] : ['bg-rose-500', 'Disconnected']; return <div className="flex items-center gap-2 text-sm font-medium text-slate-700"><span className={`h-2.5 w-2.5 rounded-full ${info[0]} ${state === 'reconnecting' ? 'animate-pulse' : ''}`} />{info[1]}</div>; }

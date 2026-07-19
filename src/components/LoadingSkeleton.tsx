@@ -1,0 +1,1 @@
+export function LoadingSkeleton() { return <div className="min-h-screen bg-slate-50 p-6"><div className="mx-auto max-w-7xl animate-pulse"><div className="mb-8 h-10 w-48 rounded bg-slate-200"/><div className="grid gap-6 lg:grid-cols-[275px_1fr]"><div className="h-[520px] rounded-3xl bg-slate-200"/><div className="h-[620px] rounded-3xl bg-slate-200"/></div></div></div> }

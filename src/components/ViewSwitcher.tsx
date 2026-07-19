@@ -1,0 +1,3 @@
+import { Box, Map } from 'lucide-react';
+export type ViewMode = '2d' | '3d';
+export function ViewSwitcher({ mode, onChange }: { mode: ViewMode; onChange: (mode: ViewMode) => void }) { return <div className="inline-flex rounded-xl bg-slate-100 p-1" aria-label="View selector"><button aria-pressed={mode === '2d'} onClick={() => onChange('2d')} className={`view-button ${mode === '2d' ? 'view-button-active' : ''}`}><Map size={16} />2D</button><button aria-pressed={mode === '3d'} onClick={() => onChange('3d')} className={`view-button ${mode === '3d' ? 'view-button-active' : ''}`}><Box size={16} />3D</button></div>; }

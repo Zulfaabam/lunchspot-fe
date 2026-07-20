@@ -1,4 +1,169 @@
-import { lazy, Suspense, useMemo, useState } from 'react'; import { useQueryClient } from '@tanstack/react-query'; import { ChevronDown, Clock3, MapPin } from 'lucide-react'; import { useCanteen } from '../hooks/useCanteen'; import { useSignalR } from '../hooks/useSignalR'; import { ConnectionStatus } from '../components/ConnectionStatus'; import { ErrorState } from '../components/ErrorState'; import { Legend } from '../components/Legend'; import { LoadingSkeleton } from '../components/LoadingSkeleton'; import { OccupancySummary } from '../components/OccupancySummary'; import { TableTooltip } from '../components/TableTooltip'; import { ViewSwitcher, type ViewMode } from '../components/ViewSwitcher'; import { SvgLayout } from '../components/layout/svg/SvgLayout'; import { occupancy } from '../utils/status'; import type { CanteenTable } from '../types/canteen';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { Clock3, MapPin, LayoutDashboard, LogIn, LogOut } from 'lucide-react';
+import { useCanteen } from '../hooks/useCanteen';
+import { useSignalR } from '../hooks/useSignalR';
+import { useAuth } from '../context/AuthContext';
+import { ConnectionStatus } from '../components/ConnectionStatus';
+import { ErrorState } from '../components/ErrorState';
+import { Legend } from '../components/Legend';
+import { LoadingSkeleton } from '../components/LoadingSkeleton';
+import { OccupancySummary } from '../components/OccupancySummary';
+import { TableTooltip } from '../components/TableTooltip';
+import { ViewSwitcher, type ViewMode } from '../components/ViewSwitcher';
+import { SvgLayout } from '../components/layout/svg/SvgLayout';
+import { occupancy } from '../utils/status';
+import type { CanteenTable } from '../types/canteen';
+
 const ThreeLayoutPromise = import('../components/layout/three/ThreeLayout');
-const ThreeLayout = lazy(() => ThreeLayoutPromise.then(m => ({ default: m.ThreeLayout })));
-export function Home() { const id = 'canteen-a'; const queryClient = useQueryClient(); const { data, isPending, isError, refetch } = useCanteen(id); const connection = useSignalR(id, queryClient); const [mode, setMode] = useState<ViewMode>('2d'); const [selected, setSelected] = useState<CanteenTable>(); const summary = useMemo(() => occupancy(data?.canteenTables.map(t => t.statusId as 0|1|2) ?? []), [data]); if (isPending) return <LoadingSkeleton/>; if (isError || !data) return <ErrorState retry={() => refetch()}/>; return <main className="min-h-screen bg-[#f7f8fa] p-4 sm:p-6 lg:p-8"><div className="mx-auto max-w-7xl"><header className="mb-7 flex items-center justify-between"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-lg font-bold text-white">L</div><div><h1 className="text-xl font-bold tracking-tight text-slate-900">LunchSpot</h1><p className="text-xs text-slate-500">Smart cafeteria monitoring</p></div></div><div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex"><MapPin size={16}/> Jakarta Office</div></header><div className="grid gap-6 lg:grid-cols-[270px_minmax(0,1fr)]"><aside className="dashboard-card h-fit p-6"><p className="section-label">Current canteen</p><button className="mb-7 flex w-full items-center justify-between border-b border-slate-100 pb-3 text-left text-lg font-semibold text-slate-800">{data.name}<ChevronDown size={18}/></button><p className="section-label">View</p><ViewSwitcher mode={mode} onChange={setMode}/><div className="my-7 border-t border-slate-100"/><p className="section-label">Connection</p><ConnectionStatus state={connection}/><div className="my-7 border-t border-slate-100"/><Legend/><div className="my-7 border-t border-slate-100"/><OccupancySummary {...summary}/><div className="my-7 border-t border-slate-100"/><p className="section-label">Last updated</p><div className="flex items-center gap-2 text-sm font-medium text-slate-600"><Clock3 size={15}/>{new Date(data.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div></aside><section className="dashboard-card relative min-h-[580px] overflow-hidden p-3 sm:p-5"><div className="mb-4 flex items-center justify-between px-2"><div><h2 className="font-semibold text-slate-900">Live floor availability</h2><p className="mt-0.5 text-sm text-slate-500">Select a table to inspect its details</p></div><span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500">{mode === '2d' ? 'Floor plan' : 'Isometric view'}</span></div>{selected && <TableTooltip table={selected} onClose={() => setSelected(undefined)}/>} {mode === '2d' ? <SvgLayout tables={data.canteenTables} selectedId={selected?.id} onSelect={setSelected}/> : <Suspense fallback={<div className="grid h-[530px] place-items-center text-sm text-slate-400">Preparing 3D view…</div>}><ThreeLayout tables={data.canteenTables} onSelect={setSelected}/></Suspense>}</section></div></div></main> }
+const ThreeLayout = lazy(() => ThreeLayoutPromise.then((m) => ({ default: m.ThreeLayout })));
+
+export function Home() {
+  const { id: paramId } = useParams<{ id: string }>();
+  const id = paramId || 'canteen-a';
+  const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data, isPending, isError, refetch } = useCanteen(id);
+  const connection = useSignalR(id, queryClient);
+
+  const [mode, setMode] = useState<ViewMode>('2d');
+  const [selected, setSelected] = useState<CanteenTable>();
+
+  const summary = useMemo(
+    () => occupancy(data?.canteenTables.map((t) => t.statusId as 0 | 1 | 2) ?? []),
+    [data]
+  );
+
+  if (isPending) return <LoadingSkeleton />;
+  if (isError || !data) return <ErrorState retry={() => refetch()} />;
+
+  return (
+    <main className="min-h-screen bg-[#f7f8fa] p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Public Header */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3 group">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 text-lg font-bold text-white shadow-sm group-hover:bg-blue-600 transition-colors">
+                L
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900">{data.name}</h1>
+                <p className="text-xs text-slate-500">Public Live Availability</p>
+              </div>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500">
+              <MapPin size={15} /> {data.location || 'Jakarta HQ'} • {data.floor || 'Floor 1'}
+            </div>
+
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-blue-600 transition-all shadow-sm"
+                >
+                  <LayoutDashboard size={14} />
+                  <span>Admin Dashboard</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  title="Sign out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                <LogIn size={14} />
+                <span>Admin Login</span>
+              </Link>
+            )}
+          </div>
+        </header>
+
+        {/* Canteen View Grid */}
+        <div className="grid gap-6 lg:grid-cols-[270px_minmax(0,1fr)]">
+          <aside className="dashboard-card h-fit p-6 space-y-6">
+            <div>
+              <p className="section-label">Current canteen</p>
+              <div className="pb-3 text-lg font-bold text-slate-800 border-b border-slate-100">
+                {data.name}
+              </div>
+            </div>
+
+            <div>
+              <p className="section-label">View Mode</p>
+              <ViewSwitcher mode={mode} onChange={setMode} />
+            </div>
+
+            <div className="border-t border-slate-100 pt-5">
+              <p className="section-label">SignalR Telemetry</p>
+              <ConnectionStatus state={connection} />
+            </div>
+
+            <div className="border-t border-slate-100 pt-5">
+              <Legend />
+            </div>
+
+            <div className="border-t border-slate-100 pt-5">
+              <OccupancySummary {...summary} />
+            </div>
+
+            <div className="border-t border-slate-100 pt-5">
+              <p className="section-label">Last updated</p>
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
+                <Clock3 size={15} />
+                {new Date(data.updatedAt).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </div>
+            </div>
+          </aside>
+
+          <section className="dashboard-card relative min-h-[580px] overflow-hidden p-3 sm:p-5">
+            <div className="mb-4 flex items-center justify-between px-2">
+              <div>
+                <h2 className="font-semibold text-slate-900">Live floor availability</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Select a table to inspect details</p>
+              </div>
+              <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
+                {mode === '2d' ? 'Floor plan' : 'Isometric 3D twin'}
+              </span>
+            </div>
+
+            {selected && <TableTooltip table={selected} onClose={() => setSelected(undefined)} />}
+
+            {mode === '2d' ? (
+              <SvgLayout tables={data.canteenTables} selectedId={selected?.id} onSelect={setSelected} />
+            ) : (
+              <Suspense
+                fallback={
+                  <div className="grid h-[530px] place-items-center text-sm text-slate-400">
+                    Preparing 3D view…
+                  </div>
+                }
+              >
+                <ThreeLayout tables={data.canteenTables} onSelect={setSelected} />
+              </Suspense>
+            )}
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}

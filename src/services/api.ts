@@ -3,7 +3,15 @@ import type { Canteen } from '../types/canteen';
 import { mockCanteenList, mockCanteenA } from './mock';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? '/api',
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:57679/api',
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('lunchspot_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export async function getCanteens(): Promise<Canteen[]> {
